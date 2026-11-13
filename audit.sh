@@ -48,12 +48,28 @@ sshd_option() {
     printf '%s' "$value" | tr '[:upper:]' '[:lower:]'
 }
 
+# Record SKIP and return 1 if the SSH server configuration cannot be judged.
+# Without root, one unreadable config file is enough to skip: the hidden file
+# could override what the readable files say, and a wrong PASS is worse than a SKIP.
+ssh_checkable() {
+    local title="$1" file
+    if [ ! -e /etc/ssh/sshd_config ]; then
+        record SKIP "$title" "/etc/ssh/sshd_config not found (is the SSH server installed?)"
+        return 1
+    fi
+    [ "$IS_ROOT" -eq 1 ] && return 0
+    for file in /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf; do
+        if [ -e "$file" ] && [ ! -r "$file" ]; then
+            record SKIP "$title" "$file is not readable without root, so the effective setting is unknown"
+            return 1
+        fi
+    done
+    return 0
+}
+
 check_ssh_root_login() {
     local title="SSH root login" value
-    if [ ! -r /etc/ssh/sshd_config ]; then
-        record SKIP "$title" "/etc/ssh/sshd_config not found or not readable (is the SSH server installed?)"
-        return
-    fi
+    ssh_checkable "$title" || return
     value="$(sshd_option PermitRootLogin)"
     case "$value" in
         no) record PASS "$title" "PermitRootLogin is 'no'" ;;
@@ -68,10 +84,7 @@ check_ssh_root_login() {
 
 check_ssh_password_auth() {
     local title="SSH password authentication" value
-    if [ ! -r /etc/ssh/sshd_config ]; then
-        record SKIP "$title" "/etc/ssh/sshd_config not found or not readable (is the SSH server installed?)"
-        return
-    fi
+    ssh_checkable "$title" || return
     value="$(sshd_option PasswordAuthentication)"
     if [ "$value" = "no" ]; then
         record PASS "$title" "PasswordAuthentication is 'no' (keys only)"
