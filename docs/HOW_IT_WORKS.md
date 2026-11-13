@@ -37,8 +37,9 @@ SKIP exists so that "not checked" is never mistaken for "fine". The summary coun
 - **Result:** `no` is PASS. `yes` is FAIL. `prohibit-password` (root may log in with a key) or no value at all is WARN, because the OpenSSH default is `prohibit-password`.
 - **Why:** if root can log in directly, an attacker only needs one secret to own the machine, and the logs do not show which person was behind the login. Logging in as a normal user and using `sudo` fixes both.
 - **How the value is found:** as root the script asks `sshd -T`, which prints the configuration the server really uses. Without root it reads `/etc/ssh/sshd_config.d/*.conf` and then `/etc/ssh/sshd_config` and takes the first value, because sshd also uses the first value it finds.
-- **Can be wrong when:** the script runs without root and the configuration uses `Match` blocks or an unusual `Include` order. Then the first value in the files may not be the effective one.
-- **SKIP when:** `/etc/ssh/sshd_config` does not exist or is not readable, which normally means no SSH server is installed.
+- **SKIP when:** `/etc/ssh/sshd_config` does not exist, which normally means no SSH server is installed, or the script runs without root and one of the SSH config files is not readable.
+- **Why an unreadable file means SKIP:** an early version read whatever files it could. On the GitHub runner one drop-in file is readable only by root. As root the script reported `PasswordAuthentication yes`, and without root it reported `no` and a PASS for the same host, because it could not see the file that set `yes`. A wrong PASS is worse than no answer, so the script now refuses to judge when part of the configuration is hidden.
+- **Can still be wrong when:** the script runs without root, all files are readable, and the configuration uses `Match` blocks or an unusual `Include` order. Then the first value in the files may not be the effective one.
 
 ### 2. SSH password authentication
 
@@ -95,7 +96,7 @@ SKIP exists so that "not checked" is never mistaken for "fine". The summary coun
 - **Result:** everything on the list is PASS. Anything else is WARN, with the paths.
 - **Why:** a SUID program runs with the rights of its owner, usually root, no matter who starts it. A mistake in such a program, or a SUID copy of a shell left behind by an attacker, gives root rights to any user.
 - **Why WARN:** the list cannot know every distribution and every installed package. An unknown SUID file is something to look at, not proof of a problem.
-- **Why not the whole disk:** the first version searched all of `/usr` and `/opt`. On the GitHub runner, which has a very large number of files there, the first CI run had not finished after seven minutes and was cancelled, so the search is limited to the directories where programs are normally installed. The price is that a SUID file hidden somewhere else, such as `/home`, `/tmp` or `/opt`, is not found. A full search is `find / -xdev -perm -4000 -type f`.
+- **Why not the whole disk:** the first version searched all of `/usr` and `/opt`. On the GitHub runner, which has a very large number of files there, the first CI run had not finished after four minutes and was cancelled, so the search is limited to the directories where programs are normally installed. The price is that a SUID file hidden somewhere else, such as `/home`, `/tmp` or `/opt`, is not found. A full search is `find / -xdev -perm -4000 -type f`.
 - **Limit:** the comparison uses the file name only. A malicious file that is named like an expected one, for example a fake `sudo` in an unusual directory, would pass.
 
 ### 10. Listening network ports
