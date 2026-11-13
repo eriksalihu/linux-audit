@@ -117,6 +117,12 @@ The reasoning behind each check and where it can be wrong is in [docs/HOW_IT_WOR
 - Add an allowlist file for expected listening ports
 - Test on Fedora and Debian in CI with containers
 
+## Related projects
+
+- [log-sentinel](https://github.com/eriksalihu/log-sentinel): finds SSH brute force, password spraying and web attack patterns in Linux auth logs and web access logs
+- [phish-triage](https://github.com/eriksalihu/phish-triage): scores .eml files for phishing risk offline and lists defanged indicators for the ticket
+- [soc-playbooks](https://github.com/eriksalihu/soc-playbooks): six tier-1 SOC alert scenarios, each with a Sigma detection rule and a response playbook
+
 ## License
 
 [MIT](LICENSE)
