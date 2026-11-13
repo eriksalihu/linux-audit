@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: ShellCheck (any finding fails the build)
+        run: shellcheck audit.sh
+      - name: JSON output is valid JSON
+        run: bash audit.sh --json | python3 -m json.tool > /dev/null
+      - name: Run the audit on this runner
+        # The script exits 0 even when it reports WARN or FAIL, so findings never fail the build.
+        run: |
+          {
+            echo "### linux-audit on the GitHub Ubuntu runner, as root"
+            echo '```text'
+            sudo bash audit.sh
+            echo '```'
+            echo "### The same host without root"
+            echo '```text'
+            bash audit.sh
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
