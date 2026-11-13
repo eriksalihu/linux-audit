@@ -179,6 +179,10 @@ EXPECTED_SUID=(at chage chfn chsh crontab dbus-daemon-launch-helper expiry fuser
     gpasswd mount mount.cifs mount.nfs newgidmap newgrp newuidmap passwd pkexec polkit-agent-helper-1
     snap-confine ssh-keysign su sudo sudoedit umount unix_chkpwd Xorg.wrap)
 
+# Directories where programs are normally installed. Searching the whole disk
+# would be more complete but can take many minutes on a large system.
+SUID_DIRS=(/usr/bin /usr/sbin /usr/lib /usr/libexec /usr/local/bin /usr/local/sbin /bin /sbin)
+
 check_suid() {
     local title="Unexpected SUID binaries" file unexpected=""
     # A SUID program runs with the rights of its owner (usually root), whoever starts it.
@@ -186,9 +190,9 @@ check_suid() {
         if ! printf '%s\n' "${EXPECTED_SUID[@]}" | grep -qxF "$(basename "$file")"; then
             unexpected="${unexpected:+$unexpected, }$file"
         fi
-    done < <(find /usr /bin /sbin /opt -xdev -type f -perm -4000 2>/dev/null | sort -u)
+    done < <(find "${SUID_DIRS[@]}" -xdev -type f -perm -4000 2>/dev/null | sort -u)
     if [ -z "$unexpected" ]; then
-        record PASS "$title" "All SUID binaries are on the list of expected system programs"
+        record PASS "$title" "All SUID binaries in the program directories are on the expected list"
     else
         record WARN "$title" "Not on the expected list: $unexpected" \
             "Check each file; if SUID is not needed remove it: chmod u-s FILE"
