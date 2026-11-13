@@ -91,10 +91,11 @@ SKIP exists so that "not checked" is never mistaken for "fine". The summary coun
 
 ### 9. Unexpected SUID binaries
 
-- **Reads:** `find` in `/usr`, `/bin`, `/sbin` and `/opt` for files with the SUID bit (`-perm -4000`), and compares each file name with a list of programs that normally have it (`sudo`, `su`, `passwd`, `mount` and so on).
+- **Reads:** `find` in the program directories (`/usr/bin`, `/usr/sbin`, `/usr/lib`, `/usr/libexec`, `/usr/local/bin`, `/usr/local/sbin`, `/bin`, `/sbin`) for files with the SUID bit (`-perm -4000`), and compares each file name with a list of programs that normally have it (`sudo`, `su`, `passwd`, `mount` and so on).
 - **Result:** everything on the list is PASS. Anything else is WARN, with the paths.
 - **Why:** a SUID program runs with the rights of its owner, usually root, no matter who starts it. A mistake in such a program, or a SUID copy of a shell left behind by an attacker, gives root rights to any user.
 - **Why WARN:** the list cannot know every distribution and every installed package. An unknown SUID file is something to look at, not proof of a problem.
+- **Why not the whole disk:** the first version searched all of `/usr` and `/opt`. On the GitHub runner, which has a very large number of files there, the first CI run had not finished after seven minutes and was cancelled, so the search is limited to the directories where programs are normally installed. The price is that a SUID file hidden somewhere else, such as `/home`, `/tmp` or `/opt`, is not found. A full search is `find / -xdev -perm -4000 -type f`.
 - **Limit:** the comparison uses the file name only. A malicious file that is named like an expected one, for example a fake `sudo` in an unusual directory, would pass.
 
 ### 10. Listening network ports
